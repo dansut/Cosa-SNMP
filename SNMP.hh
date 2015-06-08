@@ -116,6 +116,7 @@ public:
     bool encode(SYNTAX syn, const uint8_t* value);
     bool encode(SYNTAX syn, bool value);
     bool encode(SYNTAX syn);
+    uint8_t to_byte();
   };
 
   /** SNMP Protocol Data Unit (PDU). */

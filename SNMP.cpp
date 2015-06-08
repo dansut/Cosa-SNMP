@@ -266,6 +266,14 @@ SNMP::VALUE::encode(SYNTAX syn)
   return (false);
 }
 
+uint8_t
+SNMP::VALUE::to_byte()
+{
+  uint8_t ret = 0;
+  if (syntax == SYNTAX_INT) ret = data[length-1];
+  return (ret);
+}
+
 bool
 SNMP::read_byte(uint8_t& value)
 {
@@ -446,9 +454,12 @@ SNMP::recv(PDU& pdu, uint32_t ms)
 
   // Check for value to be set (otherwise null)
   if (pdu.type == SNMP::PDU_SET) {
-    length = length - (sizeof(pdu.oid.length) + pdu.oid.length + 1);
-    if (length > sizeof(pdu.value)) goto error;
-    if (read(&pdu.value, length) != length) goto error;
+    uint8_t buf[2];
+    if (read(buf, sizeof(buf)) != sizeof(buf)) goto error;
+    pdu.value.syntax = buf[0];
+    pdu.value.length = buf[1];
+    if (pdu.value.length > VALUE::DATA_MAX) goto error;
+    if (read(&pdu.value.data, pdu.value.length) != pdu.value.length) goto error;
   }
   else {
     pdu.value.encode(SYNTAX_NULL);
