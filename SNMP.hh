@@ -108,14 +108,12 @@ public:
     uint8_t syntax;
     uint8_t length;
     uint8_t data[DATA_MAX];
-    bool encode(SYNTAX syn, const char* value, size_t size);
-    bool encode_P(SYNTAX syn, const char* value, size_t size);
-    bool encode(SYNTAX syn, int16_t value);
-    bool encode(SYNTAX syn, int32_t value);
-    bool encode(SYNTAX syn, uint32_t value);
-    bool encode(SYNTAX syn, const uint8_t* value);
-    bool encode(SYNTAX syn, bool value);
-    bool encode(SYNTAX syn);
+    bool encode_ALL(SYNTAX syn, const uint8_t* valp, size_t len, bool progmem);
+    bool encode(SYNTAX syn, const char* valp, size_t len) { return encode_ALL(syn, (uint8_t*)valp, len, false); };
+    bool encode_P(SYNTAX syn, const char* valp, size_t len) { return encode_ALL(syn, (uint8_t*)valp, len, true); };
+    bool encode(SYNTAX syn, const uint8_t* valp, size_t len=sizeof(uint32_t)) { return encode_ALL(syn, valp, len, false); };
+    template<typename T> bool encode(SYNTAX syn, T val) { return encode_ALL(syn, (uint8_t*)&val, sizeof(T), false); };
+    bool encode(SYNTAX syn) { return encode_ALL(syn, NULL, 0, false); };
   };
 
   /** SNMP Protocol Data Unit (PDU). */

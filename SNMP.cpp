@@ -141,129 +141,45 @@ IOStream& operator<<(IOStream& outs, SNMP::PDU& pdu)
 }
 
 bool
-SNMP::VALUE::encode(SYNTAX syn, const char* value, size_t size)
+SNMP::VALUE::encode_ALL(SYNTAX syn, const uint8_t* valp, size_t len, bool progmem)
 {
-  if ((syn == SYNTAX_OCTETS)
-      || (syn == SYNTAX_OPAQUE)) {
-    if (size < DATA_MAX) {
-      length = size;
-      syntax = syn;
-      memcpy(data, value, size);
-      return (true);
-    }
+  if(len >= DATA_MAX) return (false);
+  uint8_t validx = 0;
+  switch(syn) {
+    case SYNTAX_OCTETS:
+    case SYNTAX_OID:
+    case SYNTAX_OPAQUE:
+      break;
+    case SYNTAX_INT: // also INT32
+    case SYNTAX_UINT32:
+    case SYNTAX_COUNTER:
+    case SYNTAX_TIME_TICKS:
+    case SYNTAX_GAUGE:
+      if((len == 0) || (len == 3) || (len > 4)) return (false);
+      validx = len-1;
+      break;
+    case SYNTAX_IP_ADDRESS:
+    case SYNTAX_NSAPADDR:
+      if(len != 4) return (false);
+      validx = len-1;
+      break;
+    case SYNTAX_NULL:
+      if(len != 0) return (false);
+      break;
+    case SYNTAX_BOOL:
+      if(len != 1) return (false);
+      break;
+    default:
+      return (false);
   }
-  return (false);
-}
-
-bool
-SNMP::VALUE::encode_P(SYNTAX syn, const char* value, size_t size)
-{
-  if ((syn == SYNTAX_OCTETS)
-      || (syn == SYNTAX_OPAQUE)
-      || (syn == SYNTAX_OID)) {
-    if (size < DATA_MAX) {
-      length = size;
-      syntax = syn;
-      memcpy_P(data, value, size);
-      return (true);
-    }
+  length = len;
+  syntax = syn;
+  int8_t valinc = ((validx == 0) ? 1 : -1);
+  for(uint8_t i=0; i<length; i++) {
+    data[i] = (progmem ? pgm_read_byte(&(valp[validx])) : valp[validx]);
+    validx += valinc;
   }
-  return (false);
-}
-
-bool
-SNMP::VALUE::encode(SYNTAX syn, int16_t value)
-{
-  if ((syn == SYNTAX_INT)
-      || (syn == SYNTAX_OPAQUE)) {
-    uint8_t *p = (uint8_t*) &value;
-    length = sizeof(value);
-    syntax = syn;
-    data[0] = p[1];
-    data[1] = p[0];
-    return (true);
-  }
-  return (false);
-}
-
-bool
-SNMP::VALUE::encode(SYNTAX syn, int32_t value)
-{
-  if ((syn == SYNTAX_INT32)
-      || (syn == SYNTAX_OPAQUE)) {
-    uint8_t *p = (uint8_t*) &value;
-    length = sizeof(value);
-    syntax = syn;
-    data[0] = p[3];
-    data[1] = p[2];
-    data[2] = p[1];
-    data[3] = p[0];
-    return (true);
-  }
-  return (false);
-}
-
-bool
-SNMP::VALUE::encode(SYNTAX syn, uint32_t value)
-{
-  if ((syn == SYNTAX_COUNTER)
-      || (syn == SYNTAX_TIME_TICKS)
-      || (syn == SYNTAX_GAUGE)
-      || (syn == SYNTAX_UINT32)
-      || (syn == SYNTAX_OPAQUE)) {
-    uint8_t *p = (uint8_t*) &value;
-    length = sizeof(value);
-    syntax = syn;
-    data[0] = p[3];
-    data[1] = p[2];
-    data[2] = p[1];
-    data[3] = p[0];
-    return (true);
-  }
-  return (false);
-}
-
-bool
-SNMP::VALUE::encode(SYNTAX syn, const uint8_t* value)
-{
-  if ((syn == SYNTAX_IP_ADDRESS)
-      || (syn == SYNTAX_NSAPADDR)
-      || (syn == SYNTAX_OPAQUE)) {
-    uint8_t *p = (uint8_t*) &value;
-    length = sizeof(uint32_t);
-    syntax = syn;
-    data[0] = p[3];
-    data[1] = p[2];
-    data[2] = p[1];
-    data[3] = p[0];
-    return (true);
-  }
-  return (false);
-}
-
-bool
-SNMP::VALUE::encode(SYNTAX syn, bool value)
-{
-  if ((syn == SYNTAX_BOOL)
-      || (syn == SYNTAX_OPAQUE)) {
-    length = sizeof(uint8_t);
-    syntax = syn;
-    data[0] = value ? 0xff : 0x00;
-    return (true);
-  }
-  return (false);
-}
-
-bool
-SNMP::VALUE::encode(SYNTAX syn)
-{
-  if ((syn == SYNTAX_NULL)
-      || (syn == SYNTAX_OPAQUE)) {
-    length = 0;
-    syntax = syn;
-    return (true);
-  }
-  return (false);
+  return (true);
 }
 
 bool
